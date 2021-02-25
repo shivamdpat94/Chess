@@ -1,5 +1,7 @@
 import pygame
+import time
 import copy
+letters = ['a','b','c','d','e','f','g','h']
 def incheck(Board,color):
     attacks = UA(Board, color)
     checked = {color:False}
@@ -20,26 +22,6 @@ def UA(Board,color):
                 if Board.board[i][j].color != color:
                     attacked_squares.extend(get_options(Board,[i,j],color))
     return attacked_squares
-
-def map(input):
-    if input[0] == 'A':
-        x = 0
-    if input[0] == 'B':
-        x = 1
-    if input[0] == 'C':
-        x = 2
-    if input[0] == 'D':
-        x = 3
-    if input[0] == 'E':
-        x = 4
-    if input[0] == 'F':
-        x = 5
-    if input[0] == 'G':
-        x = 6
-    if input[0] == 'H':
-        x = 7
-    y = int(input[1]) -1
-    return [y,x]
 
 #Pawn Class
 class Pawn:
@@ -575,19 +557,32 @@ def get_input(Board,turn):
                 # Change the x/y screen coordinates to grid coordinates
                 column = pos[0] // (WIDTH + MARGIN)
                 row = pos[1] // (HEIGHT + MARGIN)
+                if turn == 'white':
+                    ichooseyou = [7 - row, column]
+                elif turn == 'black':
+                    ichooseyou = [row, 7 - column]
                 # Set that location to one
-                grid[row][column] = 1
-                print("Click ", pos, "Grid coordinates: ", row, column)
+                try:
+                    if Board.board[ichooseyou[0]][ichooseyou[1]].color == turn:
+                        grid[row][column] = 1
+                except:
+                    pass
+                if turn == 'white':
+                    print(letters[column],8-row)
+                if turn == 'black':
+                    print(letters[7-column],row+1)
+
                 if count ==0:
                     if turn == 'white':
                         start = [7-row,column]
                     elif turn == 'black':
                         start = [row,7-column]
                     count = 1
-                    if turn == 'white':
-                        options = get_options(Board,[7-row,column],turn)
-                    elif turn == 'black':
-                        options = get_options(Board,[row,7-column],turn)
+                    try:
+                        if Board.board[ichooseyou[0]][ichooseyou[1]].color == turn:
+                            options = get_options(Board,ichooseyou,turn)
+                    except:
+                        pass
                     break
                 if count == 1:
                     if turn == 'white':
@@ -769,12 +764,64 @@ while(start):
         print("Black's Move Turn", start)
 
     check = incheck(Board, turn)
+    Checkmate = False
+    Stalemate = False
+    Nomoves = True
+    if start == 8 :
+        print('hi')
+    #########################CHECK FOR INSUFFICIENT MATERIAL##########################
 
+    whiteset = {'rook':0,'knight':0,'bishop':0,'queen':0,'pawn':0,'king':0}
+    blackset = {'rook':0,'knight':0,'bishop':0,'queen':0,'pawn':0,'king':0}
+    for i in range(0,8):
+        for j in range(0,8):
+            if Board.board[i][j] != None:
+                if Board.board[i][j].color == 'white':
+                    whiteset[Board.board[i][j].piece] = whiteset[Board.board[i][j].piece] + 1
+                elif Board.board[i][j].color == 'white':
+                    blackset[Board.board[i][j].piece] = whiteset[Board.board[i][j].piece] + 1
+    if whiteset['rook'] == 0 and ((whiteset['knight'] < 2 and whiteset['bishop'] == 0) or (whiteset['bishop'] < 2 and whiteset['knight'] == 0)) and whiteset['pawn'] == 0 and whiteset['queen'] == 0:
+        if blackset['rook'] == 0 and ((blackset['knight'] < 2 and blackset['bishop'] == 0) or (blackset['bishop'] < 2 and blackset['knight'] == 0)) and blackset['pawn'] == 0 and blackset['queen'] == 0:
+            print('INSUFFICIENT MATERIAL...STALEMATE!')
+            Stalemate = True
+
+
+
+
+    #############CHECK FOR CHECKMATE################################
+    for i in range(0,8):
+        for j in range(0,8):
+            if Board.board[i][j] !=None:
+                if Board.board[i][j].color == turn:
+                    options = get_options(Board,[i,j],turn)
+                    for k in range(0,len(options)):
+                        Board2 = Board.clone()
+                        Board2.board[options[k][0]][options[k][1]] = Board2.board[i][j]
+                        Board2.board[options[k][0]][options[k][1]].position = [options[k][0],options[k][1]]
+                        Board2.board[i][j] = None
+                        check = incheck(Board2, turn)
+                        if check[turn] == False:
+                            Nomoves = False
+    check = incheck(Board, turn)
+    if Nomoves == True and check[turn] == True:
+        if turn == 'white':
+            print("CHECKMATE BLACK WINS!")
+        elif turn == 'black':
+            print("CHECKMATE WHITE WINS!")
+        Checkmate = True
+    elif Nomoves == True and check[turn] == False:
+        print('NO LEGAL MOVES...STALEMATE!')
+        Stalemate = True
+#####################CHECK FOR CHECKS########################################
+    # if Checkmate == False and Stalemate == False:
     while(1):
+        check = incheck(Board, turn)
         if check[turn] == True:
             print('You Are in Check')
         Board2 = Board.clone()
+        ###########USER MOVE INPUT###############
         currpos, topos = get_input(Board, turn)
+
         if Board2.board[currpos[0]][currpos[1]] == None:
             continue
         Board2.board[topos[0]][topos[1]] = Board2.board[currpos[0]][currpos[1]]
@@ -783,6 +830,7 @@ while(start):
         check = incheck(Board2,turn)
         if check[turn] == False:
             break
+
     del Board2
 
 
@@ -790,6 +838,7 @@ while(start):
         start = start + 1
     else:
         print('Invalid Arguements..Try Again')
+
 
 
 pygame.quit()
